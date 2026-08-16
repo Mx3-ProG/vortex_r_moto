@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { getState } from "@/lib/scroll/scrollStore";
 import { sampleCameraPose } from "@/lib/r3f/cameraPath";
 import { damp } from "@/lib/utils/lerp";
+import { aspectZoomOutFactor } from "@/lib/r3f/responsiveFraming";
 import type { MouseState } from "@/lib/r3f/useMouseParallax";
 
 const DISCOVERY_RANGE: [number, number] = [0.1, 0.25];
@@ -23,12 +24,18 @@ export function CameraController({ motorcycleRef, mouseRef, reducedMotion }: Cam
   const lookAtTarget = useRef(new THREE.Vector3(0, 0.5, 0));
   const parallaxOffset = useRef(new THREE.Vector3());
 
-  useFrame((_state, delta) => {
+  useFrame((state, delta) => {
     const { progress } = getState();
     const pose = sampleCameraPose(progress);
 
-    camera.position.set(pose.position.x, pose.position.y, pose.position.z);
     lookAtTarget.current.set(pose.lookAt.x, pose.lookAt.y, pose.lookAt.z);
+
+    const zoomOut = aspectZoomOutFactor(state.size.width / state.size.height);
+    camera.position.set(
+      pose.lookAt.x + (pose.position.x - pose.lookAt.x) * zoomOut,
+      pose.lookAt.y + (pose.position.y - pose.lookAt.y) * zoomOut,
+      pose.lookAt.z + (pose.position.z - pose.lookAt.z) * zoomOut,
+    );
 
     if (!reducedMotion && mouseRef.current) {
       const targetX = mouseRef.current.x * MAX_PARALLAX_POSITION;
